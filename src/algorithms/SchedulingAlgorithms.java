@@ -223,23 +223,26 @@ public class SchedulingAlgorithms {
 	}
 
 	private static void SJF(ArrayList<Process> processes) {
-		Collections.sort(processes, Process.arrivalTimeSort);
+		Collections.sort(processes, Process.arrivalTimeSort); // sorts by arrival time to get the first process
 		Process firstProcess = processes.get(0);
-		firstProcess.setWT(0);
-		firstProcess.setTAT(processes.get(0).getBT());
-		firstProcess.toggleComplete();
-		int loopStart = firstProcess.getAT() + firstProcess.getBT();
-		Collections.sort(processes, Process.burstTimeSort);
-		while (!allComplete(processes)) {
-			for (int i = 0; i < processes.size(); i++) {
-				if (processes.get(i).getAT() <= loopStart && !processes.get(i).isComplete()) {
-					processes.get(i).setWT(loopStart - processes.get(i).getAT());
-					processes.get(i).setTAT(processes.get(i).getBT() + processes.get(i).getWT());
-					processes.get(i).toggleComplete(); // toggles to true
-					loopStart += processes.get(i).getBT();
-					break;
+		firstProcess.setWT(0); // first process doesn't wait
+		firstProcess.setTAT(processes.get(0).getBT()); // TAT is just WT+BT, or in this case just BT since WT is 0
+		firstProcess.toggleComplete(); // this process is now complete
+		int loopStart = firstProcess.getAT() + firstProcess.getBT(); // this is the time that the next process starts at
+		Collections.sort(processes, Process.burstTimeSort); // now we care about burst time, so it is sorted that way
+		while (!allComplete(processes)) { // loops until all processes have been completed
+			for (int i = 0; i < processes.size(); i++) { // loops through all processes
+				Process p = processes.get(i);
+				if (p.getAT() <= loopStart && !p.isComplete()) { // if the process has arrived and is not complete,
+																	// we'll use it
+					p.setWT(loopStart - p.getAT()); // WT is the time is was started - arrival time
+					p.setTAT(p.getBT() + p.getWT()); // TAT = BT+WT
+					p.toggleComplete(); // toggles to true
+					loopStart += p.getBT(); // next process starts at this processes start time + this processes BT
+					break; // breaks out of the for loop so that it will start back at the 0 index process
 				}
-				if (i == processes.size() - 1) {
+				if (i == processes.size() - 1) {// if no processes have arrived, then the loopStart will increment (idle
+												// CPU time)
 					loopStart++;
 				}
 			}
