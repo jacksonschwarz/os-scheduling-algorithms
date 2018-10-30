@@ -4,24 +4,18 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Scanner;
-import java.util.concurrent.TimeUnit;
 
 class Process {
-	public final int TIME_UNIT=1;
-	public final int MAX_TIME=100;
-	private int pid, bt, at, p, rt;
+	private int pid, bt, at, p, rt, wt = 0, tat = 0;
+	private boolean completed = false, hasArrived = false;
 	private static int processCount = 0;
 
-	private boolean hasArrived;
 	public Process(int bt, int at, int p) {
 		this.pid = ++processCount;
 		this.bt = bt;
 		this.at = at;
 		this.p = p;
-		
-		this.hasArrived=false;
-    
-		this.rt=bt;
+		this.rt = bt;
 	}
 
 	public Process(int bt, int at) {
@@ -30,6 +24,22 @@ class Process {
 
 	public Process(int bt) {
 		this(bt, 0, -1);
+	}
+
+	public void toggleArrive() {
+		this.hasArrived = !this.hasArrived;
+	}
+
+	public void toggleComplete() {
+		this.completed = !this.completed;
+	}
+
+	public boolean hasArrived() {
+		return this.hasArrived;
+	}
+
+	public boolean isComplete() {
+		return this.completed;
 	}
 
 	public int getBT() {
@@ -56,35 +66,102 @@ class Process {
 		return this.p;
 	}
 
-	public int getRT(){
-  	return this.rt;
+	public int getRT() {
+		return this.rt;
 	}
-	public boolean hasArrived() {
-		return this.hasArrived;
+
+	public int getWT() {
+		return this.wt;
 	}
-	public void toggleArrival() {
-		this.hasArrived=!this.hasArrived;
+
+	public void setWT(int wt) {
+		this.wt = wt;
 	}
-  
-  public void progressProcess(){
-    this.rt--; 
-  }
+
+	public int getTAT() {
+		return this.tat;
+	}
+
+	public void setTAT(int tat) {
+		this.tat = tat;
+	}
+
+	public void progressProcess() {
+		this.rt--;
+	}
+
+	public static Comparator<Process> pidSort = new Comparator<Process>() {
+		public int compare(Process one, Process two) {
+			return one.getPID() - two.getPID();
+		}
+	};
 	public static Comparator<Process> arrivalTimeSort = new Comparator<Process>() {
-		
+
 		public int compare(Process one, Process two) {
 			int arr1 = one.getAT();
 			int arr2 = two.getAT();
-			return arr1-arr2;
+			if (arr1 != arr2) {
+				return arr1 - arr2;
+			} else {
+				return pidSort.compare(one, two);
+			}
 		}
 	};
+
+	public static Comparator<Process> burstTimeSort = new Comparator<Process>() {
+
+		public int compare(Process one, Process two) {
+			int burst1 = one.getBT();
+			int burst2 = two.getBT();
+			if (burst1 != burst2) {
+				return burst1 - burst2;
+			} else {
+				return arrivalTimeSort.compare(one, two);
+			}
+		}
+	};
+
+	public String toString() {
+		return "PID: " + this.pid + "\tBurst Time: " + this.bt + "\tArrival Time: " + this.at + "\tWait Time: "
+				+ this.wt + "\tTurn Around Time: " + this.tat;
+	}
 }
 
 public class SchedulingAlgorithms {
 
-	/*
-	 * Creates a class to represent processes that have Burst Time (BT), Arrival
-	 * time (AT), and Priority (P)
-	 */
+	public static void displayProcesses(ArrayList<Process> processes) {
+		Collections.sort(processes, Process.pidSort);
+		for (Process p : processes) {
+			System.out.println(p);
+		}
+	}
+
+	public static int sumBT(ArrayList<Process> processes) {
+		int sum = 0;
+		for (int i = 0; i < processes.size(); i++) {
+			sum += processes.get(i).getBT();
+		}
+		return sum;
+	}
+
+	public static boolean allComplete(ArrayList<Process> processes) {
+		for (int i = 0; i < processes.size(); i++) {
+			if (!processes.get(i).isComplete()) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	public static ArrayList<Process> getArrivedProcesses(ArrayList<Process> processes, int t) {
+		ArrayList<Process> arrivedProcesses = new ArrayList<Process>();
+		for (int i = 0; i < processes.size(); i++) {
+			if (t == processes.get(i).getAT()) {
+				arrivedProcesses.add(processes.get(i));
+			}
+		}
+		return arrivedProcesses;
+	}
 
 	public static void main(String[] args) {
 		Scanner scan = new Scanner(System.in);
@@ -132,39 +209,54 @@ public class SchedulingAlgorithms {
 			System.out.println("No correct algorithm selected. Exiting system.");
 			System.exit(0);
 		}
+		displayProcesses(processes);
 	}
 
 	private static void FCFS(ArrayList<Process> processes) {
-		// sort processes from lowest arrivalTime -> Greatest. In the event of a tie,
-		// then lowest pid goes first
-    System.out.println("Process arrival times before sort: ");
-    for(int i = 0; i < processes.size(); i++){
-      System.out.print(processes.get(i).getAT()+" ");
-    }
 		Collections.sort(processes, Process.arrivalTimeSort);
-    System.out.println("Process arrival times after sort: ");
-    for(int i = 0; i < processes.size(); i++){
-      System.out.print(processes.get(i).getAT()+" ");
-    }
-    
+		int totalSum = 0;
+		for (int i = 0; i < processes.size(); i++) {
+			processes.get(i).setWT(totalSum);
+			totalSum += processes.get(i).getBT();
+			processes.get(i).setTAT(totalSum);
+		}
 	}
 
 	private static void SJF(ArrayList<Process> processes) {
-		//lowest arrival time goes first
-		//after that process finishes, find next process that has entered system (arrival time), and has the lowest burstTime
+		Collections.sort(processes, Process.arrivalTimeSort);
+		Process firstProcess = processes.get(0);
+		firstProcess.setWT(0);
+		firstProcess.setTAT(processes.get(0).getBT());
+		firstProcess.toggleComplete();
+		int loopStart = firstProcess.getAT() + firstProcess.getBT();
+		Collections.sort(processes, Process.burstTimeSort);
+		while (!allComplete(processes)) {
+			for (int i = 0; i < processes.size(); i++) {
+				if (processes.get(i).getAT() <= loopStart && !processes.get(i).isComplete()) {
+					processes.get(i).setWT(loopStart - processes.get(i).getAT());
+					processes.get(i).setTAT(processes.get(i).getBT() + processes.get(i).getWT());
+					processes.get(i).toggleComplete(); // toggles to true
+					loopStart += processes.get(i).getBT();
+					break;
+				}
+				if (i == processes.size() - 1) {
+					loopStart++;
+				}
+			}
+		}
 	}
 
 	private static void SRT(ArrayList<Process> processes) {
-		//shortest remaining time goes first
+		// shortest remaining time goes first
 
 	}
 
 	private static void Priority(ArrayList<Process> processes) {
-		//processes go based on prioirty
+		// processes go based on prioirty
 	}
 
 	private static void RR(ArrayList<Process> processes) {
-		//processes go based on the Quantum Q. Can be either fixed or vairable quantum
+		// processes go based on the Quantum Q. Can be either fixed or vairable quantum
 	}
 
 }
