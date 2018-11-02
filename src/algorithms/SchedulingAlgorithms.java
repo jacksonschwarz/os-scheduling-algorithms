@@ -35,22 +35,25 @@ class Pair {
 class Process {
 	private int pid, bt, at, p, rt, wt = 0, tat = 0;
 	private boolean completed = false, hasArrived = false;
-	private static int processCount = 0;
 
-	public Process(int bt, int at, int p) {
-		this.pid = ++processCount;
+	public Process(int pid, int bt, int at, int p) {
+		this.pid = pid;
 		this.bt = bt;
 		this.at = at;
 		this.p = p;
 		this.rt = bt;
 	}
 
-	public Process(int bt, int at) {
-		this(bt, at, -1);
+	public Process(int pid, int bt, int at) {
+		this(pid, bt, at, -1);
 	}
-
-	public Process(int bt) {
-		this(bt, 0, -1);
+	
+	public Process(int pid, int bt) {
+		this(pid, bt, 0, -1);
+	}
+	
+	public Process(int pid) {
+		this(pid, 0, 0, -1);
 	}
 
 	public void toggleArrive() {
