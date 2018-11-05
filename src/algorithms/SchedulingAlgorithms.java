@@ -301,14 +301,13 @@ public class SchedulingAlgorithms {
 			if (isFixed.equalsIgnoreCase("f")) {
 				System.out.println("Enter the quantum");
 				int quantum = scan.nextInt();
-
+				RR(processes, quantum);
 			} else if (isFixed.equalsIgnoreCase("v")) {
-
+				RR(processes);
 			} else {
 				System.out.println("Please enter either \"f\" for a fixed quantum or \"v\" for a variable quantum");
 				System.exit(0);
 			}
-			RR(processes);
 			break;
 		default:
 			System.out.println("No correct algorithm selected. Exiting system.");
@@ -420,6 +419,8 @@ public class SchedulingAlgorithms {
 			// increment the total time
 			totalTime++;
 		}
+		
+		
 		printGantt(pairs);
 	}
 
@@ -442,12 +443,51 @@ public class SchedulingAlgorithms {
 				arrived.remove(currentProcess);
 				processes.remove(currentProcess);
 			}
+			currentProcess.progressProcess();
 			totalTime++;
 		}
 	}
+	
 
+	/**
+	 * RR with a variable quantum
+	 * @param processes
+	 */
 	private static void RR(ArrayList<Process> processes) {
 		// processes go based on the Quantum Q. Can be either fixed or vaable quantum
+	}
+	/**
+	 * RR with a fixed quantum
+	 */
+	private static void RR(ArrayList<Process> processes, int Q) {
+		//first, sort the processes by arrival time
+		Collections.sort(processes, Process.arrivalTimeSort);
+		
+		int totalTime=0;
+		int processCounter=0;
+		
+		Process currentProcess;
+		ArrayList<Process> arrived=new ArrayList<Process>();
+		
+		while(!allComplete(processes)) {
+			arrived= checkArrivedProcesses(totalTime, processes);
+			currentProcess=arrived.get(processCounter);
+			if(totalTime %  Q == 0) {
+				if(processCounter < arrived.size() -1) {
+					processCounter++;
+				}
+				else {
+					processCounter=0;
+				}
+
+			}
+			currentProcess.progressProcess();
+			if(currentProcess.getRT() == 0) {
+				currentProcess.toggleComplete();
+				arrived.remove(currentProcess);
+			}
+			totalTime++;
+		}
 	}
 
 	/*
