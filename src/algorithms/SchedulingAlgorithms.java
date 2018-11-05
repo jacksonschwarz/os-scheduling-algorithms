@@ -120,7 +120,13 @@ class Process {
 	public void progressProcess() {
 		this.rt--;
 	}
-
+	
+	public int getPriority() {
+		return p;
+	}
+	public void setPriority(int aPriority) {
+		this.p=aPriority;
+	}
 	public static Comparator<Process> pidSort = new Comparator<Process>() {
 		public int compare(Process one, Process two) {
 			return one.getPID() - two.getPID();
@@ -275,9 +281,35 @@ public class SchedulingAlgorithms {
 			SRT(processes);
 			break;
 		case "Priority":
+			System.out.println("Enter the priority of each process, separated by a space");
+			String[] priorities=scan.nextLine().split("\\s");
+			if(priorities.length != pids.length) {
+				System.out.println("Please enter the same number of priorities as there are processes");
+				System.exit(0);
+			}
+			else {
+				for(int i=0;i<pids.length;i++) {
+					processes.get(i).setPriority(Integer.parseInt(priorities[i]));
+				}
+			}
 			Priority(processes);
+
 			break;
 		case "RR":
+			System.out.println("Is the quantum fixed or variable? (f/v)");
+			String isFixed=scan.nextLine();
+			if(isFixed.equalsIgnoreCase("f")) {
+				System.out.println("Enter the quantum");
+				int quantum=scan.nextInt();
+				
+			}
+			else if(isFixed.equalsIgnoreCase("v")){
+				
+			}
+			else {
+				System.out.println("Please enter either \"f\" for a fixed quantum or \"v\" for a variable quantum");
+				System.exit(0);
+			}
 			RR(processes);
 			break;
 		default:
