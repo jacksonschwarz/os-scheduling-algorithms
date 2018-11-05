@@ -370,6 +370,13 @@ public class SchedulingAlgorithms {
 		return arrived;
 	}
 
+	private static void updateWaitTimes(ArrayList<Process> processes, Process currentProcess) {
+		for(int i = 0; i < processes.size(); i++) {
+			if(processes.get(i) != currentProcess && !processes.get(i).isComplete()) {
+				processes.get(i).setWT(processes.get(i).getWT()+1);
+			}
+		}
+	}
 	private static void SRT(ArrayList<Process> processes) {
 		// shortest remaining time goes first
 
@@ -395,10 +402,17 @@ public class SchedulingAlgorithms {
 			// System.out.println(totalTime);
 			// sort by remaining time each time
 			Collections.sort(arrived, Process.remainingTimeSort);
+
 			oldProcess = currentProcess;
 			// get the one with the shortest remaining time
 			if (arrived.size() > 0) {
-				currentProcess = arrived.get(0);
+				for(int i = 0; i < arrived.size(); i++) {
+					Process p = arrived.get(i);
+					if(!p.isComplete()) {
+						currentProcess = p;
+						break;
+					}
+				}
 			} else {
 				totalTime++;
 				continue;
@@ -406,6 +420,7 @@ public class SchedulingAlgorithms {
 			if (oldProcess != currentProcess) {
 				pairs.add(new Pair(currentProcess.getPID(), totalTime));
 			}
+			updateWaitTimes(arrived, currentProcess);
 			// System.out.println(currentProcess);
 			// decrement the process with the shortest remaining time
 			currentProcess.progressProcess();
@@ -413,17 +428,16 @@ public class SchedulingAlgorithms {
 			// "processes" list
 			if (currentProcess.getRT() == 0) {
 				currentProcess.toggleComplete();
+				currentProcess.setTAT(currentProcess.getWT()+currentProcess.getBT());
 				arrived.remove(currentProcess);
-				processes.remove(currentProcess);
+				//processes.remove(currentProcess);
 			}
+			
 			// increment the total time
 			totalTime++;
 		}
-		
-		
 		printGantt(pairs);
 	}
-
 	private static void Priority(ArrayList<Process> processes) {
 		// processes go based on prioirty
 
