@@ -316,7 +316,7 @@ public class SchedulingAlgorithms {
 			System.out.println("No correct algorithm selected. Exiting system.");
 			System.exit(0);
 		}
-//		displayProcesses(processes);
+		displayProcesses(processes);
 	}
 
 	private static void FCFS(ArrayList<Process> processes) {
@@ -391,22 +391,31 @@ public class SchedulingAlgorithms {
 			   f)Increment time lap by one.
 			2- Find turnaround time (waiting_time+burst_time).
 		 */
-		
+		ArrayList<Pair> pairs = new ArrayList<Pair>();
 		ArrayList<Process> arrived=new ArrayList<Process>();
 		int totalTime=0;
 		//the process that is being worked on at any given iteration.
-		Process currentProcess;
+		Process currentProcess=null, oldProcess=null;
 		
 		//traverse until all processes are completed executed
 		while(!allComplete(processes)) {
 			//make sure that only arrived processes are being worked on.
 			arrived=checkArrivedProcesses(totalTime, processes);
-			System.out.println(totalTime);
+			//System.out.println(totalTime);
 			//sort by remaining time each time
 			Collections.sort(arrived, Process.remainingTimeSort);
+			oldProcess = currentProcess;
 			//get the one with the shortest remaining time
-			currentProcess=arrived.get(0);
-			System.out.println(currentProcess);
+			if(arrived.size() > 0) {
+				currentProcess=arrived.get(0);				
+			} else {
+				totalTime++;
+				continue;
+			}
+			if(oldProcess != currentProcess) {
+				pairs.add(new Pair(currentProcess.getPID(), totalTime));
+			}
+			//System.out.println(currentProcess);
 			//decrement the process with the shortest remaining time
 			currentProcess.progressProcess();
 			//when the process is completed, remove the process from the "arrived" and "processes" list
@@ -418,6 +427,7 @@ public class SchedulingAlgorithms {
 			//increment the total time
 			totalTime++;
 		}
+		printGantt(pairs);
 	}
 
 	private static void Priority(ArrayList<Process> processes) {
