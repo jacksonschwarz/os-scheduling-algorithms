@@ -443,23 +443,43 @@ public class SchedulingAlgorithms {
 
 		// Very similar to SRT, but sort by priority instead of remaining time.
 		ArrayList<Process> arrived = new ArrayList<Process>();
+		ArrayList<Pair> pairs = new ArrayList<Pair>();
 		int totalTime = 0;
-		Process currentProcess;
+		Process currentProcess=null, oldProcess=null;
 
 		while (!allComplete(processes)) {
 			arrived = checkArrivedProcesses(totalTime, processes);
 			System.out.println(totalTime);
 			Collections.sort(arrived, Process.prioritySort);
-			currentProcess = arrived.get(0);
-			System.out.println(currentProcess);
+			
+			oldProcess = currentProcess;
+			// get the one with the shortest remaining time
+			if (arrived.size() > 0) {
+				for(int i = 0; i < arrived.size(); i++) {
+					Process p = arrived.get(i);
+					if(!p.isComplete()) {
+						currentProcess = p;
+						break;
+					}
+				}
+			} else {
+				totalTime++;
+				continue;
+			}
+			if (oldProcess != currentProcess) {
+				pairs.add(new Pair(currentProcess.getPID(), totalTime));
+			}
+			updateWaitTimes(arrived, currentProcess);
+			//System.out.println(currentProcess);
+			currentProcess.progressProcess();
 			if (currentProcess.getRT() == 0) {
 				currentProcess.toggleComplete();
+				currentProcess.setTAT(currentProcess.getWT()+currentProcess.getBT());
 				arrived.remove(currentProcess);
-				processes.remove(currentProcess);
 			}
-			currentProcess.progressProcess();
 			totalTime++;
 		}
+		printGantt(pairs);
 	}
 	
 
