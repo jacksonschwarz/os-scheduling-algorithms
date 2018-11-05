@@ -47,11 +47,11 @@ class Process {
 	public Process(int pid, int bt, int at) {
 		this(pid, bt, at, -1);
 	}
-	
+
 	public Process(int pid, int bt) {
 		this(pid, bt, 0, -1);
 	}
-	
+
 	public Process(int pid) {
 		this(pid, 0, 0, -1);
 	}
@@ -82,7 +82,7 @@ class Process {
 
 	public void setBT(int bt) {
 		this.bt = bt;
-		this.rt=bt;
+		this.rt = bt;
 	}
 
 	public void setAT(int at) {
@@ -120,13 +120,15 @@ class Process {
 	public void progressProcess() {
 		this.rt--;
 	}
-	
+
 	public int getPriority() {
 		return p;
 	}
+
 	public void setPriority(int aPriority) {
-		this.p=aPriority;
+		this.p = aPriority;
 	}
+
 	public static Comparator<Process> pidSort = new Comparator<Process>() {
 		public int compare(Process one, Process two) {
 			return one.getPID() - two.getPID();
@@ -158,34 +160,33 @@ class Process {
 			}
 		}
 	};
-	public static Comparator<Process> remainingTimeSort=new Comparator<Process>() {
+	public static Comparator<Process> remainingTimeSort = new Comparator<Process>() {
 		public int compare(Process one, Process two) {
-			int rTime1=one.getRT();
-			int rTime2=two.getRT();
-			
-			if(rTime1 != rTime2) {
-				return rTime1-rTime2;
-			}
-			else {
+			int rTime1 = one.getRT();
+			int rTime2 = two.getRT();
+
+			if (rTime1 != rTime2) {
+				return rTime1 - rTime2;
+			} else {
 				return burstTimeSort.compare(one, two);
 			}
 		}
 	};
-	public static Comparator<Process> prioritySort=new Comparator<Process>() {
+	public static Comparator<Process> prioritySort = new Comparator<Process>() {
 		public int compare(Process one, Process two) {
-			int p1=one.getP();
-			int p2=two.getP();
-			if(p1 != p2) {
-				return p1-p2;
-			}
-			else {
+			int p1 = one.getP();
+			int p2 = two.getP();
+			if (p1 != p2) {
+				return p1 - p2;
+			} else {
 				return remainingTimeSort.compare(one, two);
 			}
 		}
 	};
+
 	public String toString() {
 		return "PID: " + this.pid + "\tBurst Time: " + this.bt + "\tArrival Time: " + this.at + "\tWait Time: "
-				+ this.wt + "\tTurn Around Time: " + this.tat+ "\tRemaining Time: "+this.rt;
+				+ this.wt + "\tTurn Around Time: " + this.tat + "\tRemaining Time: " + this.rt;
 	}
 }
 
@@ -193,17 +194,17 @@ public class SchedulingAlgorithms {
 
 	public static void displayProcesses(ArrayList<Process> processes) {
 		double avgWT = 0, avgTAT = 0;
-		
+
 		Collections.sort(processes, Process.pidSort);
-		
+
 		for (Process p : processes) {
 			System.out.println(p);
 			avgWT += p.getWT();
 			avgTAT += p.getTAT();
 		}
-		
-		System.out.printf("Average WT: %.2f\nAverage TAT: %.2f\n", avgWT/processes.size(), avgTAT/processes.size());
-		
+
+		System.out.printf("Average WT: %.2f\nAverage TAT: %.2f\n", avgWT / processes.size(), avgTAT / processes.size());
+
 	}
 
 	public static int sumBT(ArrayList<Process> processes) {
@@ -282,13 +283,12 @@ public class SchedulingAlgorithms {
 			break;
 		case "Priority":
 			System.out.println("Enter the priority of each process, separated by a space");
-			String[] priorities=scan.nextLine().split("\\s");
-			if(priorities.length != pids.length) {
+			String[] priorities = scan.nextLine().split("\\s");
+			if (priorities.length != pids.length) {
 				System.out.println("Please enter the same number of priorities as there are processes");
 				System.exit(0);
-			}
-			else {
-				for(int i=0;i<pids.length;i++) {
+			} else {
+				for (int i = 0; i < pids.length; i++) {
 					processes.get(i).setPriority(Integer.parseInt(priorities[i]));
 				}
 			}
@@ -297,16 +297,14 @@ public class SchedulingAlgorithms {
 			break;
 		case "RR":
 			System.out.println("Is the quantum fixed or variable? (f/v)");
-			String isFixed=scan.nextLine();
-			if(isFixed.equalsIgnoreCase("f")) {
+			String isFixed = scan.nextLine();
+			if (isFixed.equalsIgnoreCase("f")) {
 				System.out.println("Enter the quantum");
-				int quantum=scan.nextInt();
-				
-			}
-			else if(isFixed.equalsIgnoreCase("v")){
-				
-			}
-			else {
+				int quantum = scan.nextInt();
+
+			} else if (isFixed.equalsIgnoreCase("v")) {
+
+			} else {
 				System.out.println("Please enter either \"f\" for a fixed quantum or \"v\" for a variable quantum");
 				System.exit(0);
 			}
@@ -363,68 +361,63 @@ public class SchedulingAlgorithms {
 		printGantt(pairs);
 	}
 
-	private static ArrayList<Process> checkArrivedProcesses(int t, ArrayList<Process> processes){
-		ArrayList<Process> arrived=new ArrayList<Process>();
-		for(Process p: processes) {
-			if(t >= p.getAT()) {
+	private static ArrayList<Process> checkArrivedProcesses(int t, ArrayList<Process> processes) {
+		ArrayList<Process> arrived = new ArrayList<Process>();
+		for (Process p : processes) {
+			if (t >= p.getAT()) {
 				arrived.add(p);
 			}
 		}
 		return arrived;
 	}
+
 	private static void SRT(ArrayList<Process> processes) {
 		// shortest remaining time goes first
-		
+
 		/*
-		 * 1- Traverse until all process gets completely
-		   executed.
-			   a) Find process with minimum remaining time at
-			     every single time lap.
-			   b) Reduce its time by 1.
-			   c) Check if its remaining time becomes 0 
-			   d) Increment the counter of process completion.
-			   e) Completion time of current process = 
-			     current_time +1;
-			   e) Calculate waiting time for each completed 
-			     process.
-			   wt[i]= Completion time - arrival_time-burst_time
-			   f)Increment time lap by one.
-			2- Find turnaround time (waiting_time+burst_time).
+		 * 1- Traverse until all process gets completely executed. a) Find process with
+		 * minimum remaining time at every single time lap. b) Reduce its time by 1. c)
+		 * Check if its remaining time becomes 0 d) Increment the counter of process
+		 * completion. e) Completion time of current process = current_time +1; e)
+		 * Calculate waiting time for each completed process. wt[i]= Completion time -
+		 * arrival_time-burst_time f)Increment time lap by one. 2- Find turnaround time
+		 * (waiting_time+burst_time).
 		 */
 		ArrayList<Pair> pairs = new ArrayList<Pair>();
-		ArrayList<Process> arrived=new ArrayList<Process>();
-		int totalTime=0;
-		//the process that is being worked on at any given iteration.
-		Process currentProcess=null, oldProcess=null;
-		
-		//traverse until all processes are completed executed
-		while(!allComplete(processes)) {
-			//make sure that only arrived processes are being worked on.
-			arrived=checkArrivedProcesses(totalTime, processes);
-			//System.out.println(totalTime);
-			//sort by remaining time each time
+		ArrayList<Process> arrived = new ArrayList<Process>();
+		int totalTime = 0;
+		// the process that is being worked on at any given iteration.
+		Process currentProcess = null, oldProcess = null;
+
+		// traverse until all processes are completed executed
+		while (!allComplete(processes)) {
+			// make sure that only arrived processes are being worked on.
+			arrived = checkArrivedProcesses(totalTime, processes);
+			// System.out.println(totalTime);
+			// sort by remaining time each time
 			Collections.sort(arrived, Process.remainingTimeSort);
 			oldProcess = currentProcess;
-			//get the one with the shortest remaining time
-			if(arrived.size() > 0) {
-				currentProcess=arrived.get(0);				
+			// get the one with the shortest remaining time
+			if (arrived.size() > 0) {
+				currentProcess = arrived.get(0);
 			} else {
 				totalTime++;
 				continue;
 			}
-			if(oldProcess != currentProcess) {
+			if (oldProcess != currentProcess) {
 				pairs.add(new Pair(currentProcess.getPID(), totalTime));
 			}
-			//System.out.println(currentProcess);
-			//decrement the process with the shortest remaining time
+			// System.out.println(currentProcess);
+			// decrement the process with the shortest remaining time
 			currentProcess.progressProcess();
-			//when the process is completed, remove the process from the "arrived" and "processes" list
-			if(currentProcess.getRT() == 0) {
+			// when the process is completed, remove the process from the "arrived" and
+			// "processes" list
+			if (currentProcess.getRT() == 0) {
 				currentProcess.toggleComplete();
 				arrived.remove(currentProcess);
 				processes.remove(currentProcess);
 			}
-			//increment the total time
+			// increment the total time
 			totalTime++;
 		}
 		printGantt(pairs);
@@ -432,19 +425,19 @@ public class SchedulingAlgorithms {
 
 	private static void Priority(ArrayList<Process> processes) {
 		// processes go based on prioirty
-		
-		//Very similar to SRT, but sort by priority instead of remaining time.
-		ArrayList<Process> arrived=new ArrayList<Process>();
-		int totalTime=0;
+
+		// Very similar to SRT, but sort by priority instead of remaining time.
+		ArrayList<Process> arrived = new ArrayList<Process>();
+		int totalTime = 0;
 		Process currentProcess;
-		
-		while(!allComplete(processes)) {
-			arrived=checkArrivedProcesses(totalTime, processes);
+
+		while (!allComplete(processes)) {
+			arrived = checkArrivedProcesses(totalTime, processes);
 			System.out.println(totalTime);
 			Collections.sort(arrived, Process.prioritySort);
-			currentProcess=arrived.get(0);
+			currentProcess = arrived.get(0);
 			System.out.println(currentProcess);
-			if(currentProcess.getRT() == 0) {
+			if (currentProcess.getRT() == 0) {
 				currentProcess.toggleComplete();
 				arrived.remove(currentProcess);
 				processes.remove(currentProcess);
