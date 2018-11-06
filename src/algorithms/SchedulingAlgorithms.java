@@ -101,6 +101,10 @@ class Process {
 		return this.rt;
 	}
 
+	public void setRT(int rt) {
+		this.rt = rt;
+	}
+
 	public int getWT() {
 		return this.wt;
 	}
@@ -198,7 +202,6 @@ public class SchedulingAlgorithms {
 		Collections.sort(processes, Process.pidSort);
 
 		for (Process p : processes) {
-			System.out.println(p);
 			avgWT += p.getWT();
 			avgTAT += p.getTAT();
 		}
@@ -248,7 +251,7 @@ public class SchedulingAlgorithms {
 
 		String[] burstTimes = scan.nextLine().split("\\s");
 		if (burstTimes.length != pids.length) {
-			System.out.println("Each process must have an arrival time.");
+			System.out.println("Each process must have a burst time.");
 			System.exit(0);
 		}
 		for (int i = 0; i < pids.length; i++) {
@@ -268,7 +271,7 @@ public class SchedulingAlgorithms {
 				processes.get(i).setAT(Integer.parseInt(arrivalTimes[i]));
 			}
 		}
-
+		String[] priorities;
 		System.out.println("What sorting algorithm would you like to use (FCFS, SJF, SRT, Priority, or RR)? ");
 		String algo = scan.nextLine();
 		switch (algo) {
@@ -283,7 +286,7 @@ public class SchedulingAlgorithms {
 			break;
 		case "Priority":
 			System.out.println("Enter the priority of each process, separated by a space");
-			String[] priorities = scan.nextLine().split("\\s");
+			priorities = scan.nextLine().split("\\s");
 			if (priorities.length != pids.length) {
 				System.out.println("Please enter the same number of priorities as there are processes");
 				System.exit(0);
@@ -296,6 +299,20 @@ public class SchedulingAlgorithms {
 
 			break;
 		case "RR":
+			System.out.println("Will you be entering priorities? 'Y' if yes, 'N' if no.");
+			if (scan.nextLine().equalsIgnoreCase("Y")) {
+				System.out.println("Enter the priority of each process, separated by a space");
+				priorities = scan.nextLine().split("\\s");
+				if (priorities.length != pids.length) {
+					System.out.println("Please enter the same number of priorities as there are processes");
+					System.exit(0);
+				} else {
+					for (int i = 0; i < pids.length; i++) {
+						processes.get(i).setPriority(Integer.parseInt(priorities[i]));
+					}
+				}
+			}
+
 			System.out.println("Is the quantum fixed or variable? (f/v)");
 			String isFixed = scan.nextLine();
 			if (isFixed.equalsIgnoreCase("f")) {
@@ -304,7 +321,7 @@ public class SchedulingAlgorithms {
 				RRFixed(processes, quantum);
 			} else if (isFixed.equalsIgnoreCase("v")) {
 				System.out.println("Enter the quantum");
-				int quantum=scan.nextInt();
+				int quantum = scan.nextInt();
 				RRVariable(processes, quantum);
 			} else {
 				System.out.println("Please enter either \"f\" for a fixed quantum or \"v\" for a variable quantum");
@@ -321,15 +338,30 @@ public class SchedulingAlgorithms {
 	private static void FCFS(ArrayList<Process> processes) {
 		ArrayList<Pair> pairs = new ArrayList<Pair>();
 		Collections.sort(processes, Process.arrivalTimeSort);
-		int totalSum = 0;
-		for (int i = 0; i < processes.size(); i++) {
-			Process curr = processes.get(i);
-			pairs.add(new Pair(curr.getPID(), totalSum));
-			curr.setWT(totalSum);
-			totalSum += curr.getBT();
-			curr.setTAT(totalSum);
+		Process firstProcess = processes.get(0);
+		pairs.add(new Pair(firstProcess.getPID(), firstProcess.getAT()));
+		firstProcess.setWT(0); // first process doesn't wait
+		firstProcess.setTAT(processes.get(0).getBT()); // TAT is just WT+BT, or in this case just BT since WT is 0
+		firstProcess.toggleComplete(); // this process is now complete
+		int loopStart = firstProcess.getAT() + firstProcess.getBT(); // this is the time that the next process starts at
+		while (!allComplete(processes)) { // loops until all processes have been completed
+			for (int i = 0; i < processes.size(); i++) { // loops through all processes
+				Process p = processes.get(i);
+				if (p.getAT() <= loopStart && !p.isComplete()) { // if the process has arrived and is not complete,
+					pairs.add(new Pair(p.getPID(), loopStart)); // we'll use it
+					p.setWT(loopStart - p.getAT()); // WT is the time is was started - arrival time
+					p.setTAT(p.getBT() + p.getWT()); // TAT = BT+WT
+					p.toggleComplete(); // toggles to true
+					loopStart += p.getBT(); // next process starts at this processes start time + this processes BT
+					break; // breaks out of the for loop so that it will start back at the 0 index process
+				}
+				if (i == processes.size() - 1) {// if no processes have arrived, then the loopStart will increment (idle
+					// CPU time)
+					loopStart++;
+				}
+			}
 		}
-		printGantt(pairs); // prints the Gantt chart for this sorting algorithm
+		printGantt(pairs, loopStart); // prints the Gantt chart for this sorting algorithm
 	}
 
 	private static void SJF(ArrayList<Process> processes) {
@@ -354,12 +386,12 @@ public class SchedulingAlgorithms {
 					break; // breaks out of the for loop so that it will start back at the 0 index process
 				}
 				if (i == processes.size() - 1) {// if no processes have arrived, then the loopStart will increment (idle
-												// CPU time)
+					// CPU time)
 					loopStart++;
 				}
 			}
 		}
-		printGantt(pairs);
+		printGantt(pairs, loopStart);
 	}
 
 	private static ArrayList<Process> checkArrivedProcesses(int t, ArrayList<Process> processes) {
@@ -373,12 +405,13 @@ public class SchedulingAlgorithms {
 	}
 
 	private static void updateWaitTimes(ArrayList<Process> processes, Process currentProcess) {
-		for(int i = 0; i < processes.size(); i++) {
-			if(processes.get(i) != currentProcess && !processes.get(i).isComplete()) {
-				processes.get(i).setWT(processes.get(i).getWT()+1);
+		for (int i = 0; i < processes.size(); i++) {
+			if (processes.get(i) != currentProcess && !processes.get(i).isComplete()) {
+				processes.get(i).setWT(processes.get(i).getWT() + 1);
 			}
 		}
 	}
+
 	private static void SRT(ArrayList<Process> processes) {
 		// shortest remaining time goes first
 
@@ -408,9 +441,9 @@ public class SchedulingAlgorithms {
 			oldProcess = currentProcess;
 			// get the one with the shortest remaining time
 			if (arrived.size() > 0) {
-				for(int i = 0; i < arrived.size(); i++) {
+				for (int i = 0; i < arrived.size(); i++) {
 					Process p = arrived.get(i);
-					if(!p.isComplete()) {
+					if (!p.isComplete()) {
 						currentProcess = p;
 						break;
 					}
@@ -430,16 +463,17 @@ public class SchedulingAlgorithms {
 			// "processes" list
 			if (currentProcess.getRT() == 0) {
 				currentProcess.toggleComplete();
-				currentProcess.setTAT(currentProcess.getWT()+currentProcess.getBT());
+				currentProcess.setTAT(currentProcess.getWT() + currentProcess.getBT());
 				arrived.remove(currentProcess);
-				//processes.remove(currentProcess);
+				// processes.remove(currentProcess);
 			}
-			
+
 			// increment the total time
 			totalTime++;
 		}
-		printGantt(pairs);
+		printGantt(pairs, totalTime);
 	}
+
 	private static void Priority(ArrayList<Process> processes) {
 		// processes go based on prioirty
 
@@ -447,19 +481,19 @@ public class SchedulingAlgorithms {
 		ArrayList<Process> arrived = new ArrayList<Process>();
 		ArrayList<Pair> pairs = new ArrayList<Pair>();
 		int totalTime = 0;
-		Process currentProcess=null, oldProcess=null;
+		Process currentProcess = null, oldProcess = null;
 
 		while (!allComplete(processes)) {
 			arrived = checkArrivedProcesses(totalTime, processes);
 			System.out.println(totalTime);
 			Collections.sort(arrived, Process.prioritySort);
-			
+
 			oldProcess = currentProcess;
 			// get the one with the shortest remaining time
 			if (arrived.size() > 0) {
-				for(int i = 0; i < arrived.size(); i++) {
+				for (int i = 0; i < arrived.size(); i++) {
 					Process p = arrived.get(i);
-					if(!p.isComplete()) {
+					if (!p.isComplete()) {
 						currentProcess = p;
 						break;
 					}
@@ -472,139 +506,189 @@ public class SchedulingAlgorithms {
 				pairs.add(new Pair(currentProcess.getPID(), totalTime));
 			}
 			updateWaitTimes(arrived, currentProcess);
-			//System.out.println(currentProcess);
+			// System.out.println(currentProcess);
 			currentProcess.progressProcess();
 			if (currentProcess.getRT() == 0) {
 				currentProcess.toggleComplete();
-				currentProcess.setTAT(currentProcess.getWT()+currentProcess.getBT());
+				currentProcess.setTAT(currentProcess.getWT() + currentProcess.getBT());
 				arrived.remove(currentProcess);
 			}
 			totalTime++;
 		}
-		printGantt(pairs);
+		printGantt(pairs, totalTime);
 	}
-	
 
 	/**
 	 * RR with a variable quantum
+	 * 
 	 * @param processes
 	 */
 	private static void RRVariable(ArrayList<Process> processes, int Q) {
-		// processes go based on the Quantum Q. Can be either fixed or variable quantum
-		
-		Collections.sort(processes, Process.arrivalTimeSort);
-		
-		int totalTime=0;
-		int processCounter=0;
-		
-		Process currentProcess=null, oldProcess=null;
-		ArrayList<Process> arrived=new ArrayList<Process>();
-		
-		ArrayList<Pair> pairs=new ArrayList<Pair>();
-		
-		while(!allComplete(processes)) {
-			arrived=checkArrivedProcesses(totalTime, processes);
-			System.out.println(totalTime);
-			if(arrived.size() > 0) {
-				currentProcess=arrived.get(processCounter);
 
-				if(totalTime %  Q == 0) {
-					System.out.println("Current process: ");
-					System.out.println(currentProcess);
-					if(processCounter < arrived.size()-1) {
-						processCounter++;
-					}
-					else {
-						
-						processCounter=0;
-					}
-					
-				}
-				currentProcess.progressProcess();
-				if(currentProcess.getRT() == 0) {
-					currentProcess.toggleComplete();
-					if(processCounter < arrived.size()-1) {
-						processCounter++;
-					}
-					else {
-						processCounter=0;
+		int time = 0, oldTime = 0;
+		ArrayList<Pair> pairs = new ArrayList<Pair>();
+		ArrayList<Process> arrivedProcesses = new ArrayList<Process>();
+		Process currentProcess = null;
+		// loop until done
+		while (!allComplete(processes)) {
+			// sort processes at t=0 by priority
+			if (time == 0) {
+				arrivedProcesses = checkArrivedProcesses(time, processes);
+				Collections.sort(arrivedProcesses, Process.prioritySort);
+
+			} else {
+				for (int i = 0; i < processes.size(); i++) {
+					Process p = processes.get(i);
+					// checks for uncompleted processes that have arrived between current time and
+					// last checked (last quantum)
+					if (p.getAT() > time - Q && p.getAT() <= time && !p.isComplete()) {
+						// adjusts waitTime for processes that waited before this quantum
+						if (p.getAT() < time) {
+							p.setWT(p.getWT() + (time - p.getAT()));
+						}
+
+						// check for indexOutOfBounds
+						if (arrivedProcesses.size() != 0) {
+							arrivedProcesses.add(arrivedProcesses.size() - 1, p);
+						} else {
+							arrivedProcesses.add(p);
+						}
 					}
 				}
-				totalTime++;
-
 			}
-			else {
-				totalTime++;
+
+			// makes sure arrivedProcesses queue is not empty
+			if (arrivedProcesses.size() > 0) {
+				for (int i = 0; i < arrivedProcesses.size(); i++) {
+					Process p = arrivedProcesses.get(i);
+					if (!p.isComplete()) {
+						currentProcess = p;
+						break;
+					}
+				}
+			} else {
+				oldTime = time;
+				time++;
 				continue;
 			}
 
+			// adds pair for Gantt Chart
+			pairs.add(new Pair(currentProcess.getPID(), time));
+
+			// Determine if process needs to be re-queued or if it will be finished
+			if (currentProcess.getRT() - Q > 0) {
+				currentProcess.setRT(currentProcess.getRT() - Q);
+				arrivedProcesses.add(currentProcess);
+				oldTime = time;
+				time += Q;
+			} else {
+				oldTime = time;
+				time += currentProcess.getRT();
+				currentProcess.setRT(0);
+				currentProcess.toggleComplete();
+
+				currentProcess.setTAT(currentProcess.getWT() + currentProcess.getBT());
+
+			}
+			arrivedProcesses.remove(currentProcess);
+			for (int i = 0; i < arrivedProcesses.size(); i++) {
+				Process p = arrivedProcesses.get(i);
+				p.setWT(p.getWT() + time - oldTime);
+			}
+
 		}
+		printGantt(pairs, time);
 	}
-	/**
-	 * RR with a fixed quantum
-	 */
+
 	private static void RRFixed(ArrayList<Process> processes, int Q) {
-		//first, sort the processes by arrival time
-		Collections.sort(processes, Process.arrivalTimeSort);
-		
-		int totalTime=0;
-		int processCounter=0;
-		
-		Process currentProcess=null, oldProcess=null;
-		ArrayList<Process> arrived=new ArrayList<Process>();
-		
-		ArrayList<Pair> pairs=new ArrayList<Pair>();
-		
-		while(!allComplete(processes)) {
-			arrived=checkArrivedProcesses(totalTime, processes);
-			System.out.println(totalTime);
-			if(arrived.size() > 0) {
-				currentProcess=arrived.get(processCounter);
-
-				if(totalTime %  Q == 0) {
-					System.out.println("Current process: ");
-					System.out.println(currentProcess);
-					if(processCounter < arrived.size()-1) {
-						processCounter++;
+		int time = 0;
+		ArrayList<Pair> pairs = new ArrayList<Pair>();
+		ArrayList<Process> arrivedProcesses = new ArrayList<Process>();
+		Process currentProcess = null;
+		while (!allComplete(processes)) {
+			if (time == 0) {
+				arrivedProcesses = checkArrivedProcesses(time, processes);
+				Collections.sort(arrivedProcesses, Process.prioritySort);
+			} else {
+				for (int i = 0; i < processes.size(); i++) {
+					Process p = processes.get(i);
+					if (p.getAT() > time - Q && p.getAT() <= time && !p.isComplete()) {
+						if (p.getAT() < time) {
+							p.setWT(p.getWT() + (time - p.getAT()));
+						}
+						if (arrivedProcesses.size() != 0 && currentProcess != null && !currentProcess.isComplete()) {
+							arrivedProcesses.add(arrivedProcesses.size() - 1, p);
+						} else {
+							arrivedProcesses.add(p);
+						}
 					}
-					else {
-						processCounter=0;
-					}
-					
 				}
-				currentProcess.progressProcess();
-				if(currentProcess.getRT() == 0) {
-					currentProcess.toggleComplete();
-				}
-				totalTime++;
-
 			}
-			else {
-				totalTime++;
+
+			if (arrivedProcesses.size() > 0) {
+				for (int i = 0; i < arrivedProcesses.size(); i++) {
+					Process p = arrivedProcesses.get(i);
+					if (!p.isComplete()) {
+						currentProcess = p;
+						time += Q;
+						break;
+					}
+				}
+			} else {
+				time += Q;
 				continue;
 			}
 
+			arrivedProcesses.remove(currentProcess);
+			for (int i = 0; i < arrivedProcesses.size(); i++) {
+				Process p = arrivedProcesses.get(i);
+				p.setWT(p.getWT() + Q);
+			}
+
+			pairs.add(new Pair(currentProcess.getPID(), time - Q));
+
+			if (currentProcess.getRT() - Q > 0) {
+				currentProcess.setRT(currentProcess.getRT() - Q);
+				arrivedProcesses.add(currentProcess);
+			} else {
+				currentProcess.setRT(0);
+				currentProcess.toggleComplete();
+				currentProcess.setTAT(currentProcess.getWT() + currentProcess.getBT());
+			}
 		}
+		printGantt(pairs, time);
 	}
 
 	/*
 	 * Prints the Gantt chart for the arraylist of pairs
 	 */
-	private static void printGantt(ArrayList<Pair> pairs) {
+	private static void printGantt(ArrayList<Pair> pairs, int finalTime) {
 		Iterator<Pair> pairIt = pairs.iterator();
 		String first = "", second = "";
 
 		while (pairIt.hasNext()) {
 			Pair cur = pairIt.next();
 			first += "| " + cur.getPid() + " |";
-			second += "  " + cur.getTime() + "  ";
+			if (cur.getTime() <= 9) {
+				second += "  " + cur.getTime() + "  ";
+			} else {
+				second += "  " + cur.getTime() + " ";
+			}
 
 			if (pairIt.hasNext()) {
 				first += " ====== ";
 				second += "        ";
 			}
 		}
+		first += " ===== |";
+		second += "     ";
+		if (finalTime <= 9) {
+			second += "  " + finalTime + "  ";
+		} else {
+			second += "  " + finalTime + " ";
+		}
 		System.out.println(first);
 		System.out.println(second);
 	}
+
 }
