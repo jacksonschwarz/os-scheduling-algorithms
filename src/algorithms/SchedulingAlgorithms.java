@@ -301,9 +301,11 @@ public class SchedulingAlgorithms {
 			if (isFixed.equalsIgnoreCase("f")) {
 				System.out.println("Enter the quantum");
 				int quantum = scan.nextInt();
-				RR(processes, quantum);
+				RRFixed(processes, quantum);
 			} else if (isFixed.equalsIgnoreCase("v")) {
-				RR(processes);
+				System.out.println("Enter the quantum");
+				int quantum=scan.nextInt();
+				RRVariable(processes, quantum);
 			} else {
 				System.out.println("Please enter either \"f\" for a fixed quantum or \"v\" for a variable quantum");
 				System.exit(0);
@@ -487,40 +489,54 @@ public class SchedulingAlgorithms {
 	 * RR with a variable quantum
 	 * @param processes
 	 */
-	private static void RR(ArrayList<Process> processes) {
+	private static void RRVariable(ArrayList<Process> processes, int Q) {
 		// processes go based on the Quantum Q. Can be either fixed or vaable quantum
 	}
 	/**
 	 * RR with a fixed quantum
 	 */
-	private static void RR(ArrayList<Process> processes, int Q) {
+	private static void RRFixed(ArrayList<Process> processes, int Q) {
 		//first, sort the processes by arrival time
 		Collections.sort(processes, Process.arrivalTimeSort);
 		
 		int totalTime=0;
 		int processCounter=0;
 		
-		Process currentProcess;
+		Process currentProcess=null, oldProcess=null;
 		ArrayList<Process> arrived=new ArrayList<Process>();
 		
+		ArrayList<Pair> pairs=new ArrayList<Pair>();
+		
 		while(!allComplete(processes)) {
-			arrived= checkArrivedProcesses(totalTime, processes);
-			currentProcess=arrived.get(processCounter);
-			if(totalTime %  Q == 0) {
-				if(processCounter < arrived.size() -1) {
-					processCounter++;
+			arrived=checkArrivedProcesses(totalTime, processes);
+			System.out.println(totalTime);
+			if(arrived.size() > 0) {
+				currentProcess=arrived.get(processCounter);
+
+				if(totalTime %  Q == 0) {
+					System.out.println("Current process: ");
+					System.out.println(currentProcess);
+					if(processCounter < arrived.size()-1) {
+						processCounter++;
+					}
+					else {
+						processCounter=0;
+					}
+					
 				}
-				else {
-					processCounter=0;
+				currentProcess.progressProcess();
+				if(currentProcess.getRT() == 0) {
+					currentProcess.toggleComplete();
+					arrived.remove(currentProcess);
 				}
+				totalTime++;
 
 			}
-			currentProcess.progressProcess();
-			if(currentProcess.getRT() == 0) {
-				currentProcess.toggleComplete();
-				arrived.remove(currentProcess);
+			else {
+				totalTime++;
+				continue;
 			}
-			totalTime++;
+
 		}
 	}
 
